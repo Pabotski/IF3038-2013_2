@@ -36,22 +36,38 @@ public class Provider {
                     System.out.println("client>" + message);
                     cmd = message.split(",");
                     if (cmd[0].equals("login")) {
-                        result = urlReader("http://nicholasrio.ap01.aws.af.cm/rest/authentication?usr=ArieDoank&psw=12345123");
+                        result = urlReader("http://nicholasrio.ap01.aws.af.cm/rest/authentication?usr=" + cmd[1] + "&psw=" + cmd[2]);
                         if (result.equals("1")) {
                             sendMessage("sok login");
                         } else {
                             sendMessage("ga boleh login");
                         }
                     } else if (cmd[0].equals("showtask")) {
-                        result = urlReader("http://nicholasrio.ap01.aws.af.cm/rest/showTask?q=0&username=ArieDoank");
-                        if(result.equals(""))
+                        result = urlReader("http://nicholasrio.ap01.aws.af.cm/rest/showTaskdong?username=" + cmd[1]);
+                        if (!result.equals("")) {
                             sendMessage(result);
-                        else{
+                        } else {
                             sendMessage("No Task");
                         }
                     } else if (cmd[0].equals("sync")) {
-                        result = urlReader("http://nicholasrio.ap01.aws.af.cm/sync/taskStatusService.php?idtask=20&checked=1&timestamp=130517134000");
-                        sendMessage("sync");
+                        String[] listchange;
+                        listchange = cmd[1].split(";");
+                        boolean error = false;
+                        for (int i = 0; i < listchange.length; i++) {
+                            String[] tochange;
+                            tochange = listchange[i].split(",");
+                            result = urlReader("http://nicholasrio.ap01.aws.af.cm/sync/taskStatusService.php?idtask=" + tochange[0] + "&checked=" + tochange[1] + "&timestamp=" + tochange[2]);
+                        }
+                        sendMessage("sync success");
+                    } else if (cmd[0].equals("changestatus")) {
+                        String[] tochange;
+                        tochange = cmd[1].split(",");
+                        result = urlReader("http://nicholasrio.ap01.aws.af.cm/sync/taskStatusService.php?idtask=" + tochange[0] + "&checked=" + tochange[1] + "&timestamp=" + tochange[2]);
+                        if (result.equals("1")) {
+                            sendMessage("change status success");
+                        } else {
+                            sendMessage("failed change status");
+                        }
                     } else if (cmd[0].equals("logout")) {
                         sendMessage("logout");
                     }
