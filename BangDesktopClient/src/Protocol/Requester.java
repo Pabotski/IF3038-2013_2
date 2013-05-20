@@ -2,13 +2,13 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package progin5;
+package Protocol;
 
 /**
  *
  * @author Endy
  */
-import Model.Task;
+import Utils.Task;
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
@@ -20,12 +20,30 @@ public class Requester {
     ObjectOutputStream out;
     ObjectInputStream in;
     String message;
+    String response;
+    boolean connected = false;
+
+    public String getResponse() {
+        return response;
+    }
+    
     ArrayList<Task> tasklist;
 
-    Requester() {
+    public ArrayList<Task> getTasklist() {
+        return tasklist;
     }
 
-    void run() throws InterruptedException {
+    public boolean isConnected() {
+        return connected;
+    }
+    
+    public Requester() {
+    }
+
+    public void Connect(String msg) {
+        message = null;
+        response = null;
+        connected = false;
         try {
             //1. creating a socket to connect to the server
             requestSocket = new Socket("localhost", 8888);
@@ -35,25 +53,34 @@ public class Requester {
             out.flush();
             in = new ObjectInputStream(requestSocket.getInputStream());
             //3: Communicating with the server
-            sendMessage("login ArieDoank 12345123");
+            sendMessage(msg);
             do {
                 try {
                     message = (String) in.readObject();
+                    
+                    if (message.split(":")[0].equals("Login") || message.equals("connected") || message.split(":")[0].equals("sync")) {
+                        response = message;
+                    }
+                    
                     System.out.println("server>" + message);
-                    parseTask(message);
+                    
+                    if (msg.split("~")[0].equals("showtask")) {
+                        parseTask(message);
+                    }
+                    connected = true;
                     sendMessage("end");
                 } catch (ClassNotFoundException classNot) {
                     System.err.println("data received in unknown format");
                 }
             } while (!message.equals("end"));
-        } catch (SocketException sockex){
-            sockex.getMessage();
-            System.out.println("masuk socket execption");
-        } catch (UnknownHostException unknownHost) {
-            System.out.println("masuk unknown");
-            System.err.println("You are trying to connect to an unknown host!");
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
+            
+            
+        } catch (SocketException ex) {
+            System.err.println(ex.getMessage());
+            System.out.println("Caught by SOCKET EXCEPTION");
+            
+        } catch (IOException ex) {
+            ex.getMessage();
         } finally {
             //4: Closing connection
             try {
@@ -66,7 +93,7 @@ public class Requester {
         }
     }
 
-    void sendMessage(String msg) {
+    public void sendMessage(String msg) {
         try {
             out.writeObject(msg);
             out.flush();
@@ -76,7 +103,7 @@ public class Requester {
         }
     }
 
-    void parseTask(String msg) {
+    public void parseTask(String msg) {
         String[] tasks;
         boolean status;
         tasklist = new ArrayList<>();
@@ -102,10 +129,5 @@ public class Requester {
             Task task = new Task(task_el[3], task_el[0], task_el[1], assignees, tags, status, task_el[4]);
             tasklist.add(task);
         }
-    }
-
-    public static void main(String args[]) throws InterruptedException {
-        Requester client = new Requester();
-        client.run();
     }
 }

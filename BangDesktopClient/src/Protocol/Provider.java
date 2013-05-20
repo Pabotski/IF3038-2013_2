@@ -1,14 +1,11 @@
-package progin5;
+package Protocol;
 
 import java.io.*;
 import java.net.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class Provider extends Thread {
 
-    Socket clientSocket;
-    Socket connection = null;
+    protected Socket clientSocket;
     ObjectOutputStream out;
     ObjectInputStream in;
     String message;
@@ -20,28 +17,29 @@ public class Provider extends Thread {
         start();
     }
 
-    @Override
     public void run() {
         try {
-            System.out.println("New Thread Started to Run");
+            System.out.println("Connection received from " + clientSocket.getInetAddress().getHostName());
             //3. get Input and Output streams
-            out = new ObjectOutputStream(connection.getOutputStream());
+            out = new ObjectOutputStream(clientSocket.getOutputStream());
             out.flush();
-            in = new ObjectInputStream(connection.getInputStream());
+            in = new ObjectInputStream(clientSocket.getInputStream());
             sendMessage("Connection successful");
             //4. The two parts communicate via the input and output streams
-            System.out.println("tes1");
             do {
                 try {
+                    result = "";
                     message = (String) in.readObject();
                     System.out.println("client>" + message);
-                    cmd = message.split(" ");
+                    cmd = message.split("~");
+                    System.out.println(message);
                     if (cmd[0].equals("login")) {
                         result = urlReader("http://nicholasrio.ap01.aws.af.cm/rest/authentication?usr=" + cmd[1] + "&psw=" + cmd[2]);
+                        System.out.println("result nih : " + result + "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                         if (result.equals("1")) {
-                            sendMessage("sok login");
+                            sendMessage("Login:1");
                         } else {
-                            sendMessage("ga boleh login");
+                            sendMessage("Login:0");
                         }
                     } else if (cmd[0].equals("showtask")) {
                         result = urlReader("http://nicholasrio.ap01.aws.af.cm/rest/showTaskdong?username=" + cmd[1]);
@@ -52,6 +50,7 @@ public class Provider extends Thread {
                         }
                     } else if (cmd[0].equals("sync")) {
                         String[] listchange;
+                        System.out.println(message);
                         listchange = cmd[1].split(";");
                         boolean error = false;
                         for (int i = 0; i < listchange.length; i++) {
@@ -59,16 +58,19 @@ public class Provider extends Thread {
                             tochange = listchange[i].split(",");
                             result = urlReader("http://nicholasrio.ap01.aws.af.cm/sync/taskStatusService.php?idtask=" + tochange[0] + "&checked=" + tochange[1] + "&timestamp=" + tochange[2]);
                         }
-                        sendMessage("sync success");
+                        sendMessage("sync:1");
                     } else if (cmd[0].equals("changestatus")) {
                         String[] tochange;
                         tochange = cmd[1].split(",");
                         result = urlReader("http://nicholasrio.ap01.aws.af.cm/sync/taskStatusService.php?idtask=" + tochange[0] + "&checked=" + tochange[1] + "&timestamp=" + tochange[2]);
+                        System.out.println("http://nicholasrio.ap01.aws.af.cm/sync/taskStatusService.php?idtask=" + tochange[0] + "&checked=" + tochange[1] + "&timestamp=" + tochange[2]);
                         if (result.equals("1")) {
-                            sendMessage("change status success");
+                            sendMessage("change:1");
                         } else {
-                            sendMessage("failed change status");
+                            sendMessage("change:0");
                         }
+                    } else if (cmd[0].equals("dummy")) {
+                        sendMessage("connected");
                     } else if (cmd[0].equals("end")) {
                         sendMessage("end");
                     }
@@ -79,6 +81,8 @@ public class Provider extends Thread {
         } catch (IOException ioException) {
             ioException.printStackTrace();
         } finally {
+            //4: Closing connection
+            System.out.println("Server thread closes connection");
             try {
                 in.close();
                 out.close();
@@ -111,25 +115,30 @@ public class Provider extends Thread {
         return result;
     }
 
-    public static void main(String args[]) throws InterruptedException {
+    public static void main(String args[]) {
         ServerSocket serverSocket = null;
+
         try {
             serverSocket = new ServerSocket(8888);
+            System.out.println("Server socket created on port 8888.");
+
             try {
                 while (true) {
-                    System.out.println("Waiting For Connection");
+                    System.out.println("Waiting for Connection.");
                     new Provider(serverSocket.accept());
                 }
-            } catch (IOException e) {
-                System.out.println("Accept Failed");
+            } catch (IOException ex) {
+                System.err.println("Accept connection failed.");
+                System.exit(1);
             }
         } catch (IOException ex) {
-            System.out.println("Could Not Listen on Port 8888");
+            System.err.println("Could not listen on port 8888.");
+            System.exit(1);
         } finally {
             try {
                 serverSocket.close();
-            } catch (IOException e) {
-                System.err.println("Could not close port: 2222.");
+            } catch (IOException ex) {
+                System.err.println("Could not close port 8888.");
                 System.exit(1);
             }
         }
